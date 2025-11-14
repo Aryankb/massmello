@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:neurolink/widgets/neomorphic_card.dart';
-import 'package:neurolink/widgets/neomorphic_text_field.dart';
-import 'package:neurolink/widgets/neomorphic_button.dart';
-import 'package:neurolink/services/sos_service.dart';
-import 'package:neurolink/models/sos_settings_model.dart';
+import 'package:massmello/widgets/neomorphic_card.dart';
+import 'package:massmello/widgets/neomorphic_text_field.dart';
+import 'package:massmello/widgets/neomorphic_button.dart';
+import 'package:massmello/services/sos_service.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});

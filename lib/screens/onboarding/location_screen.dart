@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:neurolink/widgets/neomorphic_button.dart';
-import 'package:neurolink/widgets/neomorphic_text_field.dart';
-import 'package:neurolink/screens/onboarding/photos_screen.dart';
+import 'package:massmello/widgets/neomorphic_button.dart';
+import 'package:massmello/widgets/neomorphic_text_field.dart';
+import 'package:massmello/screens/onboarding/photos_screen.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:flutter/foundation.dart';
 

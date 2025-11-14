@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:neurolink/models/family_member_model.dart';
+import 'package:massmello/models/family_member_model.dart';
 
 class FamilyMemberService {
   static const String _familyMembersKey = 'family_members';

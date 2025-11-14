@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:neurolink/widgets/neomorphic_card.dart';
-import 'package:neurolink/services/user_service.dart';
-import 'package:neurolink/services/location_service.dart';
-import 'package:neurolink/services/sos_service.dart';
-import 'package:neurolink/models/user_model.dart';
-import 'package:neurolink/screens/ar_navigation_screen.dart';
-import 'package:neurolink/screens/memory_games_screen.dart';
-import 'package:neurolink/screens/family_contacts_screen.dart';
-import 'package:neurolink/screens/settings_screen.dart';
+import 'package:massmello/widgets/neomorphic_card.dart';
+import 'package:massmello/services/user_service.dart';
+import 'package:massmello/services/location_service.dart';
+import 'package:massmello/services/sos_service.dart';
+import 'package:massmello/models/user_model.dart';
+import 'package:massmello/screens/ar_navigation_screen.dart';
+import 'package:massmello/screens/memory_games_screen.dart';
+import 'package:massmello/screens/family_contacts_screen.dart';
+import 'package:massmello/screens/settings_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});

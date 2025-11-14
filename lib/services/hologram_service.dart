@@ -1,8 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:neurolink/models/hologram_message_model.dart';
-import 'package:neurolink/services/location_service.dart';
+import 'package:massmello/models/hologram_message_model.dart';
+import 'package:massmello/services/location_service.dart';
 
 class HologramService {
   static const String _hologramsKey = 'holograms';

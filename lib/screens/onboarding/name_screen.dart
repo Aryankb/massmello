@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:neurolink/widgets/neomorphic_button.dart';
-import 'package:neurolink/widgets/neomorphic_text_field.dart';
-import 'package:neurolink/screens/onboarding/location_screen.dart';
+import 'package:massmello/widgets/neomorphic_button.dart';
+import 'package:massmello/widgets/neomorphic_text_field.dart';
+import 'package:massmello/screens/onboarding/location_screen.dart';
 
 class NameScreen extends StatefulWidget {
   const NameScreen({super.key});
@@ -53,7 +53,7 @@ class _NameScreenState extends State<NameScreen> {
                 ),
                 const SizedBox(height: 32),
                 Text(
-                  'Welcome to NeuroLink',
+                  'Welcome to massmello',
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                     color: Theme.of(context).colorScheme.onSurface,

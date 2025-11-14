@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:neurolink/models/user_model.dart';
+import 'package:massmello/models/user_model.dart';
 
 class UserService {
   static const String _userKey = 'user_data';

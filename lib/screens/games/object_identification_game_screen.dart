@@ -1,9 +1,9 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:neurolink/widgets/neomorphic_button.dart';
-import 'package:neurolink/services/memory_game_service.dart';
-import 'package:neurolink/services/user_service.dart';
-import 'package:neurolink/models/memory_game_score_model.dart';
+import 'package:massmello/widgets/neomorphic_button.dart';
+import 'package:massmello/services/memory_game_service.dart';
+import 'package:massmello/services/user_service.dart';
+import 'package:massmello/models/memory_game_score_model.dart';
 
 class ObjectIdentificationGameScreen extends StatefulWidget {
   const ObjectIdentificationGameScreen({super.key});

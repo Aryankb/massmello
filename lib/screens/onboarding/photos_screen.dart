@@ -1,9 +1,9 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:neurolink/widgets/neomorphic_button.dart';
-import 'package:neurolink/widgets/neomorphic_card.dart';
-import 'package:neurolink/screens/onboarding/family_members_screen.dart';
+import 'package:massmello/widgets/neomorphic_button.dart';
+import 'package:massmello/widgets/neomorphic_card.dart';
+import 'package:massmello/screens/onboarding/family_members_screen.dart';
 
 class PhotosScreen extends StatefulWidget {
   final String name;

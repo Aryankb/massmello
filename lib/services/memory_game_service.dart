@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:neurolink/models/memory_game_score_model.dart';
+import 'package:massmello/models/memory_game_score_model.dart';
 
 class MemoryGameService {
   static const String _scoresKey = 'game_scores';

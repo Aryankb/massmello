@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:neurolink/widgets/neomorphic_card.dart';
-import 'package:neurolink/screens/games/memory_card_game_screen.dart';
-import 'package:neurolink/screens/games/object_identification_game_screen.dart';
-import 'package:neurolink/screens/games/sequence_game_screen.dart';
+import 'package:massmello/widgets/neomorphic_card.dart';
+import 'package:massmello/screens/games/memory_card_game_screen.dart';
+import 'package:massmello/screens/games/object_identification_game_screen.dart';
+import 'package:massmello/screens/games/sequence_game_screen.dart';
 
 class MemoryGamesScreen extends StatelessWidget {
   const MemoryGamesScreen({super.key});

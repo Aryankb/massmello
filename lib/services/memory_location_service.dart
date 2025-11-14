@@ -1,8 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:neurolink/models/memory_location_model.dart';
-import 'package:neurolink/services/location_service.dart';
+import 'package:massmello/models/memory_location_model.dart';
+import 'package:massmello/services/location_service.dart';
 
 class MemoryLocationService {
   static const String _memoryLocationsKey = 'memory_locations';

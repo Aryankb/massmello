@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:neurolink/services/user_service.dart';
-import 'package:neurolink/screens/onboarding/name_screen.dart';
-import 'package:neurolink/screens/home_screen.dart';
+import 'package:massmello/services/user_service.dart';
+import 'package:massmello/screens/onboarding/name_screen.dart';
+import 'package:massmello/screens/home_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -98,7 +98,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                 ),
                 const SizedBox(height: 32),
                 Text(
-                  'NeuroLink',
+                  'massmello',
                   style: Theme.of(context).textTheme.displaySmall?.copyWith(
                     color: Theme.of(context).colorScheme.primary,
                     fontWeight: FontWeight.bold,

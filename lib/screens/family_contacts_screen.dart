@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
-import 'package:neurolink/widgets/neomorphic_card.dart';
-import 'package:neurolink/widgets/neomorphic_text_field.dart';
-import 'package:neurolink/widgets/neomorphic_button.dart';
-import 'package:neurolink/services/family_member_service.dart';
-import 'package:neurolink/models/family_member_model.dart';
+import 'package:massmello/widgets/neomorphic_card.dart';
+import 'package:massmello/widgets/neomorphic_text_field.dart';
+import 'package:massmello/widgets/neomorphic_button.dart';
+import 'package:massmello/services/family_member_service.dart';
+import 'package:massmello/models/family_member_model.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class FamilyContactsScreen extends StatefulWidget {

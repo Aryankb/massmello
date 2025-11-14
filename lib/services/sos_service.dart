@@ -2,8 +2,8 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:neurolink/models/sos_settings_model.dart';
-import 'package:neurolink/services/location_service.dart';
+import 'package:massmello/models/sos_settings_model.dart';
+import 'package:massmello/services/location_service.dart';
 
 class SOSService {
   static const String _sosSettingsKey = 'sos_settings';

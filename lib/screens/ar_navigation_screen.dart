@@ -1,20 +1,11 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
-import 'package:ar_flutter_plugin/ar_flutter_plugin.dart';
-import 'package:ar_flutter_plugin/datatypes/config_planedetection.dart';
-import 'package:ar_flutter_plugin/datatypes/node_types.dart';
-import 'package:ar_flutter_plugin/managers/ar_anchor_manager.dart';
-import 'package:ar_flutter_plugin/managers/ar_location_manager.dart';
-import 'package:ar_flutter_plugin/managers/ar_object_manager.dart';
-import 'package:ar_flutter_plugin/managers/ar_session_manager.dart';
-import 'package:ar_flutter_plugin/models/ar_node.dart';
+import 'package:arkit_plugin/arkit_plugin.dart';
 import 'package:flutter_compass/flutter_compass.dart';
 import 'package:vector_math/vector_math_64.dart' as vector;
-import 'dart:math' show sin, cos;
-import 'package:neurolink/services/user_service.dart';
-import 'package:neurolink/services/location_service.dart';
-import 'package:geolocator/geolocator.dart';
+import 'dart:math' show sin, cos, pi;
+import 'package:massmello/services/user_service.dart';
+import 'package:massmello/services/location_service.dart';
 
 class ARNavigationScreen extends StatefulWidget {
   const ARNavigationScreen({super.key});
@@ -24,13 +15,10 @@ class ARNavigationScreen extends StatefulWidget {
 }
 
 class _ARNavigationScreenState extends State<ARNavigationScreen> {
-  ARSessionManager? arSessionManager;
-  ARObjectManager? arObjectManager;
-  ARAnchorManager? arAnchorManager;
+  late ARKitController arkitController;
 
   double? _homeLatitude;
   double? _homeLongitude;
-  Position? _currentPosition;
   double? _compassHeading;
   double _distanceToHome = 0;
   double _bearingToHome = 0;
@@ -38,7 +26,7 @@ class _ARNavigationScreenState extends State<ARNavigationScreen> {
   Timer? _updateTimer;
   final LocationService _locationService = LocationService();
   StreamSubscription<CompassEvent>? _compassSubscription;
-  ARNode? _arrowNode;
+  ARKitNode? _arrowNode;
 
   @override
   void initState() {
@@ -51,7 +39,7 @@ class _ARNavigationScreenState extends State<ARNavigationScreen> {
   void dispose() {
     _updateTimer?.cancel();
     _compassSubscription?.cancel();
-    arSessionManager?.dispose();
+    arkitController.dispose();
     super.dispose();
   }
 
@@ -84,7 +72,6 @@ class _ARNavigationScreenState extends State<ARNavigationScreen> {
     final position = await _locationService.getCurrentPosition();
     if (position != null && _homeLatitude != null && _homeLongitude != null) {
       setState(() {
-        _currentPosition = position;
         _distanceToHome = _locationService.calculateDistance(
           position.latitude,
           position.longitude,
@@ -103,51 +90,39 @@ class _ARNavigationScreenState extends State<ARNavigationScreen> {
   }
 
   void _updateARArrow() {
-    if (arObjectManager == null || _compassHeading == null) return;
+    if (_compassHeading == null) return;
 
     final adjustedBearing = (_bearingToHome - _compassHeading!) % 360;
-    final radians = adjustedBearing * (3.14159 / 180);
+    final radians = adjustedBearing * (pi / 180);
 
     if (_arrowNode != null) {
-      arObjectManager?.removeNode(_arrowNode!);
+      arkitController.remove(_arrowNode!.name);
     }
 
     final distance = 2.0;
     final x = distance * sin(radians);
     final z = -distance * cos(radians);
 
-    _arrowNode = ARNode(
-      type: NodeType.webGLB,
-      uri: "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Triangle/glTF/Triangle.gltf",
-      scale: vector.Vector3(0.3, 0.3, 0.3),
+    _arrowNode = ARKitNode(
+      geometry: ARKitBox(
+        width: 0.2,
+        height: 0.6,
+        length: 0.1,
+        materials: [
+          ARKitMaterial(
+            diffuse: ARKitMaterialProperty.color(Colors.blue),
+          ),
+        ],
+      ),
       position: vector.Vector3(x, -0.5, z),
-      rotation: vector.Vector4(0, 1, 0, radians),
+      eulerAngles: vector.Vector3(0, radians, 0),
     );
 
-    arObjectManager?.addNode(_arrowNode!).catchError((error) {
-      debugPrint('Error adding AR node: $error');
-    });
+    arkitController.add(_arrowNode!);
   }
 
-  void onARViewCreated(
-    ARSessionManager arSessionManager,
-    ARObjectManager arObjectManager,
-    ARAnchorManager arAnchorManager,
-    ARLocationManager arLocationManager,
-  ) {
-    this.arSessionManager = arSessionManager;
-    this.arObjectManager = arObjectManager;
-    this.arAnchorManager = arAnchorManager;
-
-    this.arSessionManager!.onInitialize(
-      showFeaturePoints: false,
-      showPlanes: false,
-      showWorldOrigin: false,
-      handlePans: false,
-      handleRotation: false,
-    );
-    
-    this.arObjectManager!.onInitialize();
+  void onARKitViewCreated(ARKitController controller) {
+    arkitController = controller;
     _updateARArrow();
   }
 
@@ -157,9 +132,9 @@ class _ARNavigationScreenState extends State<ARNavigationScreen> {
       backgroundColor: Colors.black,
       body: Stack(
         children: [
-          ARView(
-            onARViewCreated: onARViewCreated,
-            planeDetectionConfig: PlaneDetectionConfig.none,
+          ARKitSceneView(
+            onARKitViewCreated: onARKitViewCreated,
+            showStatistics: false,
           ),
           SafeArea(
             child: Column(
