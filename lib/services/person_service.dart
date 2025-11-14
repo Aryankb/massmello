@@ -40,10 +40,71 @@ class PersonService {
       persons[existingIndex] = person;
     } else {
       persons.add(person);
+      // Only save to backend if we have a valid photo URL
+      if (person.photoUrl != null && person.photoUrl!.isNotEmpty) {
+        final imageFile = File(person.photoUrl!);
+        if (await imageFile.exists()) {
+          await savePersonToBackend(
+            name: person.name,
+            imageFile: imageFile,
+            relationship: person.relationship,
+            notes: person.notes,
+          );
+        } else {
+          print('Image file does not exist at path: ${person.photoUrl}');
+        }
+      }
     }
     
     final personsJson = persons.map((p) => jsonEncode(p.toJson())).toList();
     await prefs.setStringList(_personsKey, personsJson);
+  }
+
+  // Save a new person to backend API
+  Future<Map<String, dynamic>?> savePersonToBackend({
+    required String name,
+    required File imageFile,
+    String? relationship,
+    String? notes,
+  }) async {
+    try {
+      final uri = Uri.parse('$_backendUrl/save_person');
+      final request = http.MultipartRequest('POST', uri);
+      
+      // Add name as form field
+      request.fields['name'] = name;
+      
+      // Add optional fields
+      if (relationship != null && relationship.isNotEmpty) {
+        request.fields['relationship'] = relationship;
+      }
+      if (notes != null && notes.isNotEmpty) {
+        request.fields['notes'] = notes;
+      }
+      
+      // Add image file
+      request.files.add(
+        await http.MultipartFile.fromPath(
+          'image',
+          imageFile.path,
+        ),
+      );
+
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+        print('Person saved to backend successfully: $responseData');
+        return responseData;
+      } else {
+        print('Backend error: ${response.statusCode} - ${response.body}');
+        return null;
+      }
+    } catch (e) {
+      print('Error saving person to backend: $e');
+      return null;
+    }
   }
 
   // Update person with new identification

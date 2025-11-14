@@ -200,6 +200,7 @@ class _PersonIdentificationScreenState extends State<PersonIdentificationScreen>
         notes: _notesController.text.trim().isEmpty
             ? null
             : _notesController.text.trim(),
+        photoUrl: _selectedImage?.path, // Include the selected image path
         addedDate: DateTime.now(),
         aiAnalysis: _aiAnalysis,
         identifiedDates: [DateTime.now().toIso8601String()],
@@ -261,7 +262,7 @@ class _PersonIdentificationScreenState extends State<PersonIdentificationScreen>
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.fromLTRB(24, 24, 24, 40),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
