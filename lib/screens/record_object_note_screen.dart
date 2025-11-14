@@ -6,8 +6,6 @@ import 'package:arkit_plugin/arkit_plugin.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
 import 'package:massmello/services/object_recognition_service.dart';
 import 'package:massmello/models/object_note_model.dart';
 import 'package:massmello/widgets/neomorphic_container.dart';
@@ -38,6 +36,10 @@ class _RecordObjectNoteScreenState extends State<RecordObjectNoteScreen> {
   bool _showARPreview = false;
   ARKitNode? _previewNode;
   
+  // Playback mode state
+  bool _isPlaybackMode = false;
+  ObjectNoteModel? _playingNote;
+  
   RecordingMode _recordingMode = RecordingMode.text;
   List<ObjectNoteModel> _savedNotes = [];
   final int _maxLocalNotes = 5;
@@ -47,11 +49,16 @@ class _RecordObjectNoteScreenState extends State<RecordObjectNoteScreen> {
     super.initState();
     _initializeCamera();
     _loadSavedNotes();
+    _initializeTTS();
   }
 
   @override
   void dispose() {
-    _cameraController?.dispose();
+    _cameraController?.stopImageStream().then((_) {
+      _cameraController?.dispose();
+    }).catchError((e) {
+      _cameraController?.dispose();
+    });
     _arkitController?.dispose();
     _recognitionService.dispose();
     _flutterTts.stop();
@@ -59,6 +66,13 @@ class _RecordObjectNoteScreenState extends State<RecordObjectNoteScreen> {
     _noteController.dispose();
     _objectNameController.dispose();
     super.dispose();
+  }
+
+  Future<void> _initializeTTS() async {
+    await _flutterTts.setLanguage("en-US");
+    await _flutterTts.setSpeechRate(0.5);
+    await _flutterTts.setVolume(1.0);
+    await _flutterTts.setPitch(1.0);
   }
 
   Future<void> _initializeCamera() async {
@@ -69,15 +83,95 @@ class _RecordObjectNoteScreenState extends State<RecordObjectNoteScreen> {
           _cameras![0],
           ResolutionPreset.high,
           enableAudio: false,
+          imageFormatGroup: ImageFormatGroup.yuv420,
         );
         
         await _cameraController!.initialize();
         if (mounted) {
           setState(() {});
+          
+          // Start auto-detection if in playback mode
+          if (_isPlaybackMode) {
+            _startAutoDetection();
+          }
         }
       }
     } catch (e) {
       debugPrint('Error initializing camera: $e');
+    }
+  }
+
+  void _startAutoDetection() {
+    if (!_isPlaybackMode || _cameraController == null || !_cameraController!.value.isInitialized) {
+      return;
+    }
+
+    int frameCounter = 0;
+    _cameraController!.startImageStream((CameraImage image) async {
+      if (_isProcessing || !_isPlaybackMode) return;
+
+      frameCounter++;
+      // Process every 30th frame to avoid overwhelming the system
+      if (frameCounter % 30 != 0) return;
+
+      _isProcessing = true;
+
+      try {
+        // Detect objects in the frame
+        final objects = await _recognitionService.detectObjects(image);
+
+        if (objects.isNotEmpty && mounted) {
+          // Find matching object notes
+          for (var detectedObject in objects) {
+            final matchingNote = await _recognitionService.findMatchingObjectNote(
+              detectedObject.label,
+            );
+
+            if (matchingNote != null && mounted) {
+              // Found a saved object! Play it back
+              setState(() {
+                _playingNote = matchingNote;
+                _detectedObject = detectedObject.label;
+              });
+
+              // Play the message
+              await _playObjectNote(matchingNote);
+              
+              // Wait a bit before detecting again to avoid repeated playback
+              await Future.delayed(const Duration(seconds: 5));
+              break;
+            }
+          }
+        }
+      } catch (e) {
+        debugPrint('Error during auto-detection: $e');
+      } finally {
+        _isProcessing = false;
+      }
+    });
+  }
+
+  void _stopAutoDetection() {
+    if (_cameraController != null && _cameraController!.value.isStreamingImages) {
+      _cameraController!.stopImageStream();
+    }
+    setState(() {
+      _playingNote = null;
+      _detectedObject = null;
+    });
+  }
+
+  Future<void> _playObjectNote(ObjectNoteModel note) async {
+    try {
+      if (note.audioPath != null && note.audioPath!.isNotEmpty) {
+        // Play audio note
+        await _audioPlayer.play(DeviceFileSource(note.audioPath!));
+      } else if (note.note.isNotEmpty) {
+        // Play text note with TTS
+        await _flutterTts.speak(note.note);
+      }
+    } catch (e) {
+      debugPrint('Error playing note: $e');
     }
   }
 
@@ -173,9 +267,6 @@ class _RecordObjectNoteScreenState extends State<RecordObjectNoteScreen> {
       // Keep only last 5 notes
       await _enforceLocalLimit();
 
-      // Try to save to backend
-      await _saveToBackend(objectNote);
-
       _showSnackBar('Object note saved successfully!');
       _resetForm();
       await _loadSavedNotes();
@@ -184,32 +275,6 @@ class _RecordObjectNoteScreenState extends State<RecordObjectNoteScreen> {
       _showSnackBar('Failed to save note');
     } finally {
       setState(() => _isProcessing = false);
-    }
-  }
-
-  Future<void> _saveToBackend(ObjectNoteModel objectNote) async {
-    try {
-      const apiUrl = 'https://your-backend-api.com/api/object-save';
-      
-      // Skip if placeholder URL
-      if (apiUrl.contains('your-backend-api.com')) {
-        debugPrint('Backend not configured, saving locally only');
-        return;
-      }
-
-      final response = await http.post(
-        Uri.parse(apiUrl),
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode(objectNote.toJson()),
-      ).timeout(const Duration(seconds: 10));
-
-      if (response.statusCode == 200) {
-        debugPrint('Successfully saved to backend');
-      } else {
-        debugPrint('Backend save failed: ${response.statusCode}');
-      }
-    } catch (e) {
-      debugPrint('Backend save error: $e');
     }
   }
 
@@ -322,9 +387,10 @@ class _RecordObjectNoteScreenState extends State<RecordObjectNoteScreen> {
             ),
 
           // Top header with back button and info
-          SafeArea(
-            child: Column(
-              children: [
+          Positioned.fill(
+            child: SafeArea(
+              child: Column(
+                children: [
                 Container(
                   margin: const EdgeInsets.all(16),
                   padding: const EdgeInsets.all(20),
@@ -341,19 +407,61 @@ class _RecordObjectNoteScreenState extends State<RecordObjectNoteScreen> {
                             onPressed: () => Navigator.pop(context),
                           ),
                           const SizedBox(width: 8),
-                          const Expanded(
+                          Expanded(
                             child: Text(
-                              'Record Object Memory',
-                              style: TextStyle(
+                              _isPlaybackMode ? 'Playback Mode' : 'Record Object Memory',
+                              style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
                           ),
+                          // Mode toggle button
+                          GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                _isPlaybackMode = !_isPlaybackMode;
+                                if (_isPlaybackMode) {
+                                  _stopAutoDetection();
+                                  _startAutoDetection();
+                                } else {
+                                  _stopAutoDetection();
+                                }
+                              });
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: _isPlaybackMode 
+                                    ? const Color(0xFF6C63FF).withOpacity(0.8)
+                                    : Colors.white.withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    _isPlaybackMode ? Icons.play_circle_outline : Icons.fiber_manual_record,
+                                    color: Colors.white,
+                                    size: 20,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    _isPlaybackMode ? 'Play' : 'Record',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
                         ],
                       ),
-                      if (_detectedObject != null) ...[
+                      if (_detectedObject != null && !_isPlaybackMode) ...[
                         const SizedBox(height: 16),
                         Row(
                           children: [
@@ -372,6 +480,57 @@ class _RecordObjectNoteScreenState extends State<RecordObjectNoteScreen> {
                           ],
                         ),
                       ],
+                      // Playback mode info
+                      if (_isPlaybackMode) ...[
+                        const SizedBox(height: 16),
+                        Row(
+                          children: [
+                            Icon(
+                              _playingNote != null ? Icons.volume_up : Icons.search,
+                              color: _playingNote != null ? const Color(0xFF6C63FF) : Colors.white70,
+                              size: 24,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                _playingNote != null 
+                                    ? 'Playing: ${_playingNote!.objectName}'
+                                    : 'Scanning for saved objects...',
+                                style: TextStyle(
+                                  color: _playingNote != null ? const Color(0xFF6C63FF) : Colors.white70,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        if (_playingNote != null) ...[
+                          const SizedBox(height: 12),
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF6C63FF).withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: const Color(0xFF6C63FF).withOpacity(0.5),
+                                width: 1,
+                              ),
+                            ),
+                            child: Text(
+                              _playingNote!.note.isNotEmpty 
+                                  ? _playingNote!.note 
+                                  : 'Audio message playing...',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 14,
+                              ),
+                              maxLines: 3,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ],
                     ],
                   ),
                 ),
@@ -379,14 +538,15 @@ class _RecordObjectNoteScreenState extends State<RecordObjectNoteScreen> {
                 const Spacer(),
 
                 // Bottom controls
-                Container(
-                  margin: const EdgeInsets.all(16),
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.7),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Column(
+                if (!_isPlaybackMode)
+                  Container(
+                    margin: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.7),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       // Scan instruction or object name input
@@ -666,6 +826,7 @@ class _RecordObjectNoteScreenState extends State<RecordObjectNoteScreen> {
               ],
             ),
           ),
+          ), // Positioned.fill
         ],
       ),
     );

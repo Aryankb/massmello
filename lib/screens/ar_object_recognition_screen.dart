@@ -6,7 +6,6 @@ import 'package:flutter_tts/flutter_tts.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:massmello/services/object_recognition_service.dart';
 import 'package:massmello/models/object_note_model.dart';
-import 'package:massmello/widgets/neomorphic_container.dart';
 import 'package:vector_math/vector_math_64.dart' as vector;
 
 class ARObjectRecognitionScreen extends StatefulWidget {
@@ -136,18 +135,6 @@ class _ARObjectRecognitionScreenState extends State<ARObjectRecognitionScreen> {
         _isARActive = true;
       });
       await _playNoteInAR(localMatch);
-      return;
-    }
-
-    // Check backend
-    final backendMatch = await _recognitionService.checkObjectInDatabase(objectLabel);
-    
-    if (backendMatch != null) {
-      setState(() {
-        _matchedNote = backendMatch;
-        _isARActive = true;
-      });
-      await _playNoteInAR(backendMatch);
     } else {
       setState(() {
         _matchedNote = null;
@@ -212,7 +199,7 @@ class _ARObjectRecognitionScreenState extends State<ARObjectRecognitionScreen> {
       backgroundColor: Colors.black,
       body: Stack(
         children: [
-          // Camera preview
+          // Camera preview as background
           if (_cameraController != null && _cameraController!.value.isInitialized)
             Positioned.fill(
               child: CameraPreview(_cameraController!),
@@ -227,24 +214,63 @@ class _ARObjectRecognitionScreenState extends State<ARObjectRecognitionScreen> {
               ),
             ),
 
-          // UI Overlay
+          // Object detection border highlight (centered)
+          if (_detectedObject != null)
+            Center(
+              child: Container(
+                width: 280,
+                height: 280,
+                decoration: BoxDecoration(
+                  border: Border.all(
+                    color: _matchedNote != null 
+                        ? const Color(0xFF6C63FF)
+                        : Colors.orange,
+                    width: 4,
+                  ),
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: [
+                    BoxShadow(
+                      color: (_matchedNote != null 
+                          ? const Color(0xFF6C63FF)
+                          : Colors.orange).withOpacity(0.6),
+                      blurRadius: 30,
+                      spreadRadius: 8,
+                    ),
+                  ],
+                ),
+                child: Center(
+                  child: Icon(
+                    _matchedNote != null ? Icons.check_circle : Icons.search,
+                    color: _matchedNote != null 
+                        ? const Color(0xFF6C63FF)
+                        : Colors.orange,
+                    size: 48,
+                  ),
+                ),
+              ),
+            ),
+
+          // UI Overlay (inspired by AR Navigation)
           SafeArea(
-            child: SingleChildScrollView(
-              child: SizedBox(
-                height: MediaQuery.of(context).size.height - MediaQuery.of(context).padding.top - MediaQuery.of(context).padding.bottom,
-                child: Column(
-                  children: [
-                    // Header
-                    NeomorphicContainer(
-                      margin: const EdgeInsets.all(16),
-                      padding: const EdgeInsets.all(16),
-                      child: Row(
+            child: Column(
+              children: [
+                // Top header with info
+                Container(
+                  margin: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.7),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
                         children: [
                           IconButton(
                             icon: const Icon(Icons.arrow_back, color: Colors.white),
                             onPressed: () => Navigator.pop(context),
                           ),
-                          const SizedBox(width: 12),
+                          const SizedBox(width: 8),
                           const Expanded(
                             child: Text(
                               'Object Memory Scanner',
@@ -257,92 +283,154 @@ class _ARObjectRecognitionScreenState extends State<ARObjectRecognitionScreen> {
                           ),
                         ],
                       ),
-                    ),
-
-                    const Spacer(),
-
-                    // Detection status
-                    if (_detectedObject != null)
-                      NeomorphicContainer(
-                        margin: const EdgeInsets.symmetric(horizontal: 16),
-                        padding: const EdgeInsets.all(20),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
+                      if (_detectedObject != null) ...[
+                        const SizedBox(height: 16),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceAround,
                           children: [
-                            Row(
-                              children: [
-                                Icon(
-                                  _matchedNote != null ? Icons.check_circle : Icons.search,
-                                  color: _matchedNote != null ? Colors.green : Colors.orange,
-                                  size: 32,
-                                ),
+                            _buildInfoItem(
+                              icon: Icons.camera_alt,
+                              label: 'Object',
+                              value: _detectedObject!.length > 12 
+                                  ? '${_detectedObject!.substring(0, 12)}...'
+                                  : _detectedObject!,
+                            ),
+                            _buildInfoItem(
+                              icon: _matchedNote != null ? Icons.check_circle : Icons.search,
+                              label: 'Status',
+                              value: _matchedNote != null ? 'Found' : 'Searching',
+                            ),
+                          ],
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                
+                const Spacer(),
+
+                // Memory display when found
+                if (_matchedNote != null)
+                  Container(
+                    margin: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF6C63FF).withOpacity(0.9),
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF6C63FF).withOpacity(0.5),
+                          blurRadius: 20,
+                          spreadRadius: 2,
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              _matchedNote!.audioPath != null 
+                                  ? Icons.volume_up 
+                                  : Icons.text_fields,
+                              color: Colors.white,
+                              size: 28,
+                            ),
                             const SizedBox(width: 12),
                             Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    _matchedNote != null ? 'Memory Found!' : 'Scanning...',
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    'Detected: $_detectedObject',
-                                    style: TextStyle(
-                                      color: Colors.white.withOpacity(0.7),
-                                      fontSize: 14,
-                                    ),
-                                  ),
-                                ],
+                              child: Text(
+                                'Memory: ${_matchedNote!.objectName}',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             ),
                           ],
                         ),
-                        if (_matchedNote != null) ...[
-                          const SizedBox(height: 16),
-                          const Divider(color: Colors.white24),
-                          const SizedBox(height: 12),
-                          Text(
-                            _matchedNote!.note,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 15,
+                        const SizedBox(height: 12),
+                        const Divider(color: Colors.white30),
+                        const SizedBox(height: 12),
+                        Text(
+                          _matchedNote!.note,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            height: 1.4,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.auto_awesome, color: Colors.white70, size: 16),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Auto-playing message',
+                              style: TextStyle(
+                                color: Colors.white.withOpacity(0.7),
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  )
+                else if (_detectedObject != null)
+                  Container(
+                    margin: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.withOpacity(0.9),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.search, color: Colors.white, size: 24),
+                        SizedBox(width: 12),
+                        Text(
+                          'Searching for saved memories...',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                else
+                  Container(
+                    margin: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.7),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.camera_alt, color: Colors.white70, size: 20),
+                        SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            'Point camera at objects to find memories',
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 14,
                             ),
                             textAlign: TextAlign.center,
                           ),
-                        ],
+                        ),
                       ],
                     ),
                   ),
-
-                const SizedBox(height: 16),
-
-                // Instructions
-                NeomorphicContainer(
-                  margin: const EdgeInsets.all(16),
-                  padding: const EdgeInsets.all(16),
-                  child: const Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.camera_alt, color: Colors.white70, size: 20),
-                      SizedBox(width: 12),
-                      Text(
-                        'Point camera at objects to find memories',
-                        style: TextStyle(
-                          color: Colors.white70,
-                          fontSize: 14,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
               ],
-            ),
-              ),
             ),
           ),
         ],
@@ -355,6 +443,35 @@ class _ARObjectRecognitionScreenState extends State<ARObjectRecognitionScreen> {
         icon: const Icon(Icons.add),
         label: const Text('Add Memory'),
       ),
+    );
+  }
+
+  Widget _buildInfoItem({
+    required IconData icon,
+    required String label,
+    required String value,
+  }) {
+    return Column(
+      children: [
+        Icon(icon, color: Colors.white.withOpacity(0.8), size: 28),
+        const SizedBox(height: 8),
+        Text(
+          label,
+          style: TextStyle(
+            color: Colors.white.withOpacity(0.7),
+            fontSize: 12,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
     );
   }
 }
