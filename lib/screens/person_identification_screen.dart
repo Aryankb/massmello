@@ -98,8 +98,59 @@ class _PersonIdentificationScreenState extends State<PersonIdentificationScreen>
         _isProcessing = false;
       });
 
-      // Check if person is already in database
-      if (backendResult != null && backendResult['person_id'] != null) {
+      // Check if person is found in backend
+      if (backendResult != null && 
+          backendResult['status'] == 'success' && 
+          backendResult['person_name'] != null) {
+        
+        final personName = backendResult['person_name'] as String;
+        
+        // Check if person exists in local storage
+        final localPersons = await _personService.getAllPersons();
+        PersonModel? matchedPerson;
+        
+        // Try to find person by matching the name
+        for (var person in localPersons) {
+          if (person.name.toLowerCase() == personName.toLowerCase() ||
+              person.id == personName) {
+            matchedPerson = person;
+            break;
+          }
+        }
+        
+        if (matchedPerson != null) {
+          // Person found in local storage
+          setState(() {
+            _isIdentified = true;
+            _identifiedPerson = matchedPerson;
+            _nameController.text = matchedPerson!.name;
+            _relationshipController.text = matchedPerson.relationship ?? '';
+            _notesController.text = matchedPerson.notes ?? '';
+          });
+          
+          // Mark as identified
+          await _personService.markPersonIdentified(matchedPerson.id);
+          
+          if (mounted) {
+            _showPersonIdentifiedDialog(matchedPerson);
+          }
+        } else {
+          // Person found in backend but not in local storage - pre-fill name
+          setState(() {
+            _nameController.text = personName;
+          });
+          
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Person recognized: $personName. Please add details to save locally.'),
+                duration: const Duration(seconds: 3),
+              ),
+            );
+          }
+        }
+      } else if (backendResult != null && backendResult['person_id'] != null) {
+        // Legacy support for old API format
         final person = await _personService.getPerson(backendResult['person_id']);
         if (person != null) {
           setState(() {
