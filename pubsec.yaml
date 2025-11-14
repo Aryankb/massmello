@@ -1,0 +1,39 @@
+name: neurolink
+description: "NeuroLink is a compassionate AI-powered Flutter app, designed with a soothing Neomorphism UI, that acts as a digital caregiver for Alzheimer's patients, offering intelligent memory assistance, AR navigation, and engaging cognitive games."
+publish_to: "none"
+version: 1.0.0
+
+environment:
+  sdk: ^3.6.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  google_fonts: ^6.1.0
+  ar_flutter_plugin: 0.7.3
+  geolocator: ^9.0.2
+  geocoding: ^4.0.0
+  flutter_compass: 0.8.1
+  shared_preferences: ^2.0.0
+  http: ^1.0.0
+  permission_handler: ^10.1.0
+  image_picker: '>=1.1.2'
+  path_provider: ^2.0.0
+  url_launcher: ^6.0.0
+  vector_math: ^2.0.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+  flutter_launcher_icons: ^0.13.1
+
+flutter:
+  uses-material-design: true
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: assets/icons/dreamflow_icon.jpg
+  remove_alpha_ios: true
