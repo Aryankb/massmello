@@ -8,6 +8,9 @@ import 'package:massmello/screens/ar_navigation_screen.dart';
 import 'package:massmello/screens/memory_games_screen.dart';
 import 'package:massmello/screens/family_contacts_screen.dart';
 import 'package:massmello/screens/settings_screen.dart';
+import 'package:massmello/screens/person_identification_screen.dart';
+import 'package:massmello/screens/ar_object_recognition_screen.dart';
+import 'package:massmello/screens/record_object_note_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -181,6 +184,45 @@ class _HomeScreenState extends State<HomeScreen> {
                   }
 
                   final items = <Widget>[
+                    _buildActionCard(
+                      context,
+                      icon: Icons.person_search,
+                      title: 'Identify Person',
+                      subtitle: 'Remember new people',
+                      color: Colors.purple,
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const PersonIdentificationScreen()),
+                        );
+                      },
+                    ),
+                    _buildActionCard(
+                      context,
+                      icon: Icons.view_in_ar_outlined,
+                      title: 'Object Memory',
+                      subtitle: 'Scan objects to recall memories',
+                      color: const Color(0xFF6C63FF),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const ARObjectRecognitionScreen()),
+                        );
+                      },
+                    ),
+                    _buildActionCard(
+                      context,
+                      icon: Icons.add_box_outlined,
+                      title: 'Record Memory',
+                      subtitle: 'Save new object memories',
+                      color: const Color(0xFFFF6584),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const RecordObjectNoteScreen()),
+                        );
+                      },
+                    ),
                     _buildActionCard(
                       context,
                       icon: Icons.navigation_outlined,

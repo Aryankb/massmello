@@ -24,7 +24,7 @@ class NeomorphicCard extends StatelessWidget {
     final shadowLight = isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white;
 
     final cardWidget = Container(
-      margin: margin ?? const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+      margin: margin ?? const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
       decoration: BoxDecoration(
         color: bgColor,
         borderRadius: BorderRadius.circular(20),
