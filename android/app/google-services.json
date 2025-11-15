@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "YOUR_PROJECT_NUMBER",
-    "project_id": "YOUR_PROJECT_ID",
-    "storage_bucket": "YOUR_PROJECT_ID.appspot.com"
+    "project_number": "298692527824",
+    "project_id": "alzhimer-664d4",
+    "storage_bucket": "alzhimer-664d4.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:YOUR_PROJECT_NUMBER:android:YOUR_APP_ID",
+        "mobilesdk_app_id": "1:298692527824:android:6b558cefb27948980e80d5",
         "android_client_info": {
           "package_name": "com.example.massmello"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "YOUR_ANDROID_API_KEY"
+          "current_key": "AIzaSyCv-M2Lvjt1iGhCMptT9wj-ZJHx-zKKCoI"
         }
       ],
       "services": {

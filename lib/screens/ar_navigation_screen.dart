@@ -103,19 +103,11 @@ class _ARNavigationScreenState extends State<ARNavigationScreen> {
     final x = distance * sin(radians);
     final z = -distance * cos(radians);
 
-    _arrowNode = ARKitNode(
-      geometry: ARKitBox(
-        width: 0.2,
-        height: 0.6,
-        length: 0.1,
-        materials: [
-          ARKitMaterial(
-            diffuse: ARKitMaterialProperty.color(Colors.blue),
-          ),
-        ],
-      ),
+    _arrowNode = ARKitReferenceNode(
+      url: 'assets/models/arrow.obj',
       position: vector.Vector3(x, -0.5, z),
-      eulerAngles: vector.Vector3(0, radians, 0),
+      scale: vector.Vector3(0.2, 0.2, 0.2),
+      eulerAngles: vector.Vector3(pi / 2, radians, 0),
     );
 
     arkitController.add(_arrowNode!);
