@@ -120,7 +120,7 @@ class _FamilyMembersScreenState extends State<FamilyMembersScreen> {
         homeLongitude: widget.longitude,
         radius: 500,
         isEnabled: true,
-        backendUrl: 'http://localhost:8000',
+        backendUrl: 'https://e15f2aaa9b20.ngrok-free.app',
       );
       await SOSService().saveSOSSettings(sosSettings);
 

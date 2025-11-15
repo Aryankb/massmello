@@ -162,7 +162,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             const SizedBox(height: 12),
             NeomorphicTextField(
               controller: _backendUrlController,
-              hintText: 'http://localhost:8000',
+              hintText: 'https://b715c7f06e54.ngrok-free.app',
               prefixIcon: Icon(Icons.link, color: Theme.of(context).colorScheme.primary),
             ),
             const SizedBox(height: 32),
