@@ -46,7 +46,15 @@ class SOSService {
       );
 
       if (distance > settings.radius) {
-        await sendSOSRequest(settings.backendUrl, settings.userId, currentLat, currentLong);
+        await sendSOSRequest(
+          settings.backendUrl, 
+          settings.userId, 
+          currentLat, 
+          currentLong,
+          settings.homeLatitude,
+          settings.homeLongitude,
+          distance,
+        );
         await updateSOSSettings(settings.copyWith(lastTriggered: DateTime.now()));
         return true;
       }
@@ -57,7 +65,15 @@ class SOSService {
     }
   }
 
-  Future<void> sendSOSRequest(String backendUrl, String userId, double currentLat, double currentLong) async {
+  Future<void> sendSOSRequest(
+    String backendUrl, 
+    String userId, 
+    double currentLat, 
+    double currentLong,
+    double homeLat,
+    double homeLong,
+    double distanceFromHome,
+  ) async {
     try {
       final url = '$backendUrl/location_crossed';
       final response = await http.post(
@@ -66,8 +82,11 @@ class SOSService {
         body: json.encode({
           'latitude': currentLat,
           'longitude': currentLong,
+          'homeLatitude': homeLat,
+          'homeLongitude': homeLong,
+          'distanceFromHomeMeters': distanceFromHome,
           // 'timestamp': DateTime.now().toIso8601String(),
-          'text': 'Location crossed at lat: $currentLat, long: $currentLong',
+          'text': 'Location crossed at lat: $currentLat, long: $currentLong. Distance from home: ${distanceFromHome.toStringAsFixed(2)} meters',
         }),
       );
 
