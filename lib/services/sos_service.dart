@@ -64,10 +64,10 @@ class SOSService {
         Uri.parse(url),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
-          'userId': userId,
           'latitude': currentLat,
           'longitude': currentLong,
-          'timestamp': DateTime.now().toIso8601String(),
+          // 'timestamp': DateTime.now().toIso8601String(),
+          'text': 'Location crossed at lat: $currentLat, long: $currentLong',
         }),
       );
 
