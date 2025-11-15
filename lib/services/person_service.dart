@@ -6,7 +6,7 @@ import 'package:http/http.dart' as http;
 
 class PersonService {
   static const String _personsKey = 'remembered_persons';
-  static const String _backendUrl = 'https://b715c7f06e54.ngrok-free.app'; // Replace with your backend URL
+  static const String _backendUrl = 'https://7a03fc0f9d92.ngrok-free.app'; // Replace with your backend URL
 
   // Get all remembered persons
   Future<List<PersonModel>> getAllPersons() async {
@@ -206,5 +206,64 @@ class PersonService {
     });
     
     return allPersons.take(limit).toList();
+  }
+
+  // Save person transcript (voice recording)
+  Future<Map<String, dynamic>?> savePersonTranscript({
+    required String personName,
+    required File audioFile,
+  }) async {
+    try {
+      final uri = Uri.parse('$_backendUrl/save_person_transcript');
+      final request = http.MultipartRequest('POST', uri);
+      
+      // Add person name as form field
+      request.fields['person_name'] = personName;
+      
+      // Add audio file
+      request.files.add(
+        await http.MultipartFile.fromPath(
+          'audio',
+          audioFile.path,
+        ),
+      );
+
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+        print('Transcript saved successfully: $responseData');
+        return responseData;
+      } else {
+        print('Backend error: ${response.statusCode} - ${response.body}');
+        return null;
+      }
+    } catch (e) {
+      print('Error saving transcript: $e');
+      return null;
+    }
+  }
+
+  // Fetch person transcripts
+  Future<Map<String, dynamic>?> fetchPersonTranscripts({
+    required String personName,
+  }) async {
+    try {
+      final uri = Uri.parse('$_backendUrl/fetch_person_transcript?person_name=$personName');
+      final response = await http.get(uri);
+
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+        print('Transcripts fetched successfully: $responseData');
+        return responseData;
+      } else {
+        print('Backend error: ${response.statusCode} - ${response.body}');
+        return null;
+      }
+    } catch (e) {
+      print('Error fetching transcripts: $e');
+      return null;
+    }
   }
 }

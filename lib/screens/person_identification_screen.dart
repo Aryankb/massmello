@@ -6,6 +6,9 @@ import 'package:massmello/services/person_service.dart';
 import 'package:massmello/widgets/neomorphic_card.dart';
 import 'package:massmello/widgets/neomorphic_button.dart';
 import 'package:massmello/widgets/neomorphic_text_field.dart';
+import 'package:flutter_sound/flutter_sound.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class PersonIdentificationScreen extends StatefulWidget {
   const PersonIdentificationScreen({super.key});
@@ -17,6 +20,7 @@ class PersonIdentificationScreen extends StatefulWidget {
 class _PersonIdentificationScreenState extends State<PersonIdentificationScreen> {
   final PersonService _personService = PersonService();
   final ImagePicker _picker = ImagePicker();
+  final FlutterSoundRecorder _audioRecorder = FlutterSoundRecorder();
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _relationshipController = TextEditingController();
   final TextEditingController _notesController = TextEditingController();
@@ -27,15 +31,24 @@ class _PersonIdentificationScreenState extends State<PersonIdentificationScreen>
   PersonModel? _identifiedPerson;
   Map<String, dynamic>? _aiAnalysis;
   List<PersonModel> _savedPersons = [];
+  String? _recognizedPersonName; // Name from backend API
+  bool _isRecordingVoice = false;
+  File? _recordedAudioFile;
 
   @override
   void initState() {
     super.initState();
     _loadSavedPersons();
+    _initAudioRecorder();
+  }
+
+  Future<void> _initAudioRecorder() async {
+    await _audioRecorder.openRecorder();
   }
 
   @override
   void dispose() {
+    _audioRecorder.closeRecorder();
     _nameController.dispose();
     _relationshipController.dispose();
     _notesController.dispose();
@@ -104,6 +117,11 @@ class _PersonIdentificationScreenState extends State<PersonIdentificationScreen>
           backendResult['person_name'] != null) {
         
         final personName = backendResult['person_name'] as String;
+        
+        // Store the recognized person name
+        setState(() {
+          _recognizedPersonName = personName;
+        });
         
         // Check if person exists in local storage
         final localPersons = await _personService.getAllPersons();
@@ -289,10 +307,278 @@ class _PersonIdentificationScreenState extends State<PersonIdentificationScreen>
       _isIdentified = false;
       _identifiedPerson = null;
       _aiAnalysis = null;
+      _recognizedPersonName = null;
+      _isRecordingVoice = false;
+      _recordedAudioFile = null;
       _nameController.clear();
       _relationshipController.clear();
       _notesController.clear();
     });
+  }
+
+  // Record voice for a person
+  Future<void> _recordVoiceNote(String personName) async {
+    // Check and request microphone permission
+    final status = await Permission.microphone.request();
+    if (!status.isGranted) {
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Microphone Permission Required'),
+            content: const Text(
+              'This app needs microphone access to record voice notes. Please grant permission in Settings.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  openAppSettings();
+                },
+                child: const Text('Open Settings'),
+              ),
+            ],
+          ),
+        );
+      }
+      return;
+    }
+
+    if (_isRecordingVoice) {
+      // Stop recording
+      await _stopRecording(personName);
+    } else {
+      // Start recording
+      await _startRecording(personName);
+    }
+  }
+
+  Future<void> _startRecording(String personName) async {
+    try {
+      // Ensure recorder is open
+      if (!_audioRecorder.isRecording) {
+        final directory = await getApplicationDocumentsDirectory();
+        final filePath = '${directory.path}/voice_note_${DateTime.now().millisecondsSinceEpoch}.aac';
+        
+        await _audioRecorder.startRecorder(
+          toFile: filePath,
+          codec: Codec.aacADTS,
+        );
+        
+        setState(() {
+          _isRecordingVoice = true;
+          _recordedAudioFile = File(filePath);
+        });
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  const Icon(Icons.mic, color: Colors.red),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text('Recording voice note for $personName...'),
+                  ),
+                ],
+              ),
+              duration: const Duration(days: 1), // Keep until stopped
+              action: SnackBarAction(
+                label: 'Stop',
+                onPressed: () => _stopRecording(personName),
+              ),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('Error starting recording: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error starting recording: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _stopRecording(String personName) async {
+    try {
+      await _audioRecorder.stopRecorder();
+      
+      setState(() {
+        _isRecordingVoice = false;
+      });
+      
+      // Hide the recording snackbar
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      
+      if (_recordedAudioFile != null && await _recordedAudioFile!.exists()) {
+        await _uploadVoiceNote(personName, _recordedAudioFile!);
+      }
+    } catch (e) {
+      setState(() {
+        _isRecordingVoice = false;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error stopping recording: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _uploadVoiceNote(String personName, File audioFile) async {
+    setState(() => _isProcessing = true);
+    
+    try {
+      final result = await _personService.savePersonTranscript(
+        personName: personName,
+        audioFile: audioFile,
+      );
+      
+      setState(() => _isProcessing = false);
+      
+      if (result != null && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Voice note saved for $personName!'),
+            action: SnackBarAction(
+              label: 'View',
+              onPressed: () => _showMemories(personName),
+            ),
+          ),
+        );
+        
+        // Clean up the temp file
+        try {
+          await audioFile.delete();
+        } catch (e) {
+          debugPrint('Error deleting temp file: $e');
+        }
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to save voice note')),
+        );
+      }
+    } catch (e) {
+      setState(() => _isProcessing = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error uploading voice note: $e')),
+        );
+      }
+    }
+  }
+
+  // Simulate voice recording (for testing) - REMOVED, using real recording now
+
+  // Show memories/transcripts for a person
+  Future<void> _showMemories(String personName) async {
+    setState(() => _isProcessing = true);
+    
+    try {
+      final transcripts = await _personService.fetchPersonTranscripts(
+        personName: personName,
+      );
+      
+      setState(() => _isProcessing = false);
+      
+      if (!mounted) return;
+      
+      if (transcripts != null && transcripts['transcripts'] != null) {
+        _showMemoriesDialog(personName, transcripts['transcripts']);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('No memories found for $personName')),
+        );
+      }
+    } catch (e) {
+      setState(() => _isProcessing = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error fetching memories: $e')),
+        );
+      }
+    }
+  }
+
+  // Show memories dialog
+  void _showMemoriesDialog(String personName, List<dynamic> transcripts) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Icon(Icons.history, color: Theme.of(context).colorScheme.primary, size: 28),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'Memories: $personName',
+                style: const TextStyle(fontSize: 18),
+              ),
+            ),
+          ],
+        ),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: transcripts.isEmpty
+              ? const Padding(
+                  padding: EdgeInsets.all(20.0),
+                  child: Text(
+                    'No memories recorded yet',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 16),
+                  ),
+                )
+              : ListView.separated(
+                  shrinkWrap: true,
+                  itemCount: transcripts.length,
+                  separatorBuilder: (context, index) => const Divider(),
+                  itemBuilder: (context, index) {
+                    final transcript = transcripts[index];
+                    return ListTile(
+                      leading: CircleAvatar(
+                        backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                        child: Text('${index + 1}'),
+                      ),
+                      title: Text(
+                        transcript['text'] ?? transcript['transcript'] ?? 'No text',
+                        style: const TextStyle(fontSize: 14),
+                      ),
+                      subtitle: transcript['timestamp'] != null
+                          ? Text(
+                              transcript['timestamp'],
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                              ),
+                            )
+                          : null,
+                    );
+                  },
+                ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _recordVoiceNote(personName);
+            },
+            child: const Text('Add Memory'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -374,6 +660,29 @@ class _PersonIdentificationScreenState extends State<PersonIdentificationScreen>
                                 child: Text(
                                   _aiAnalysis!['analysis'] ?? 'Person detected',
                                   style: Theme.of(context).textTheme.bodyMedium,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                      // Show Memories button when person is recognized
+                      if (_recognizedPersonName != null) ...[
+                        const SizedBox(height: 16),
+                        NeomorphicButton(
+                          onPressed: _isProcessing 
+                              ? () {} 
+                              : () => _showMemories(_recognizedPersonName!),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.history, color: Theme.of(context).colorScheme.primary),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  'Show Memories for: $_recognizedPersonName',
+                                  style: const TextStyle(fontWeight: FontWeight.bold),
+                                  textAlign: TextAlign.center,
                                 ),
                               ),
                             ],
@@ -561,11 +870,26 @@ class _PersonIdentificationScreenState extends State<PersonIdentificationScreen>
                               ],
                             ),
                           ),
-                          Text(
-                            '${person.identifiedDates.length}x',
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
-                            ),
+                          Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                '${person.identifiedDates.length}x',
+                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              IconButton(
+                                icon: Icon(
+                                  Icons.mic,
+                                  color: Theme.of(context).colorScheme.primary,
+                                  size: 20,
+                                ),
+                                onPressed: () => _recordVoiceNote(person.name),
+                                tooltip: 'Record Voice Note',
+                              ),
+                            ],
                           ),
                         ],
                       ),

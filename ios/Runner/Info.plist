@@ -45,6 +45,10 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+	</array>
 	<key>NSCameraUsageDescription</key>
 	<string>This app needs camera access for AR navigation and hologram features.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
@@ -53,6 +57,8 @@
 	<string>This app needs location access to monitor your safety and send alerts to family.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>This app needs photo access to store your images for recognition.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>This app needs microphone access to record voice notes and memories.</string>
 	<key>io.flutter.embedded_views_preview</key>
 	<true/>
 </dict>
